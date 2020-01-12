@@ -1,4 +1,5 @@
 ---
+# Default packages installed on all hosts
 packages:
   - vim
   - epel-release
