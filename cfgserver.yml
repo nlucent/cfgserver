@@ -1,0 +1,105 @@
+---
+
+- hosts: "{{ ip }}"
+  remote_user: root
+  vars_files:
+    inventory.yaml
+  gather_facts: no
+
+  tasks:
+
+    - name: Remove old ssh-key
+      command: "ssh-keygen -R {{ ip }}"
+      delegate_to: localhost
+
+    - name: Push ssh key
+      command: "ssh-copy-id root@{{ ip }}"
+      delegate_to: localhost
+
+    - name: Yum update
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Install pre-reqs
+      yum:
+        name: "{{ item.prereq }}"
+        state: latest
+      when: (server == item.hostname and item.prereq is defined)
+      with_items: "{{ servers }}"
+
+    - name: Install default packages
+      yum:
+        name: "{{ packages }}"
+        state: latest
+
+    - name: Install system packages
+      yum:
+        name: "{{ item.packages }}"
+        state: latest
+      when: (server == item.hostname)
+      with_items: "{{ servers }}"
+      ignore_errors: true
+
+    - name: Install Ovirt agent
+      yum:
+        name: ovirt-guest-agent
+        state: latest
+      when: (server == item.hostname and item.machinetype == 'vm')
+      with_items: "{{ servers }}"
+
+    - name: Start and Enable services
+      service:
+        name: ovirt-guest-agent
+        state: started
+        enabled: yes
+      when: (server == item.hostname and item.machinetype == 'vm')
+      with_items: "{{ servers }}"
+         
+    - name: Set prod IP to static
+      lineinfile:
+        path: /etc/sysconfig/network-scripts/ifcfg-eth0
+        regexp: ^BOOTPROTO=dhcp
+        line: BOOTPROTO=static
+     
+    - name: Configure prod IP
+      nmcli:
+        conn_name: eth0
+        ifname: eth0
+        type: ethernet
+        ip4: "{{ item.ip }}/24"
+        gw4: "{{ item.gateway }}"
+        dns4: "{{ item.dns }}"
+        state: present
+      when: (server == item.hostname)
+      with_items: "{{ servers }}"
+
+    - name: Set Hostname
+      lineinfile:
+        path: /etc/hostname
+        regexp: ^localhost
+        line: "{{ item.hostname }}.{{ item.domain }}"
+      when: (server == item.hostname)
+      with_items: "{{ servers }}"
+
+    - name: Add host entry
+      lineinfile:
+        path: /etc/hosts
+        insertafter: '^::1'
+        line: "{{ item.ip }}        {{ item.hostname }}.{{ item.domain }}"
+      when: (server == item.hostname)
+      with_items: "{{ servers }}"
+
+    - name: Create root .ssh directory
+      file:
+        path: /root/.ssh
+        state: directory
+        mode: '0700'
+
+    - name: Copy ssh keys
+      copy:
+        src: authorized_keys
+        dest: /root/.ssh
+
+    - name: Reboot server (Will Fail)
+      command: reboot

@@ -1,0 +1,31 @@
+---
+packages:
+  - vim
+  - epel-release
+  - NetworkManager-glib
+  - nm-connection-editor
+  - libsemanage-python
+  - policycoreutils-python
+  - freeipa-client
+
+servers:
+  - hostname: server1
+    domain: domain.com
+    ip: 192.168.1.12
+    gateway: 192.168.1.1
+    dns: 192.168.1.1
+    dnssearch: domain.com
+    machinetype: vm
+    prereq: https://mirror.webtatic.com/yum/el7/webtatic-release.rpm
+    packages: ['httpd','php72w','php72w-dom','php72w-mbstring,php72w-gd','php72w-pdo','php72w-json','php72w-xml','php72w-zip','php72w-curl','php72w-pear','php72w-intl','setroubleshoot-server','bzip2','php72w-pecl-imagick','mariadb-server','php72w-mysql','php-opcache','redis','php72w-pecl-redis']
+
+  - hostname: server2
+    domain: any.net
+    ip: 10.0.0.8
+    gateway: 10.0.0.1
+    dns: 10.0.0.4 10.0.0.5 10.0.0.6
+    dnssearch: any.net
+    machinetype: phys
+    prereq: 
+    packages: []
+
