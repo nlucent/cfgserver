@@ -21,6 +21,16 @@
         name: "*"
         state: latest
 
+    - name: Run preconfig yaml
+      include: "{{ item }}"
+      with_items: "{{ preconfig }}"
+      when: preconfig.is defined
+
+    - name: Run server preconfig 
+      include: "{{ item.preconfig }}"
+      when: (server == item.hostname and item.preconfig is defined)
+      with_items: "{{ servers }}"
+
     - name: Install pre-reqs
       yum:
         name: "{{ item.prereq }}"
@@ -59,7 +69,7 @@
     - name: Set prod IP to static
       lineinfile:
         path: /etc/sysconfig/network-scripts/ifcfg-eth0
-        regexp: ^BOOTPROTO=dhcp
+        regexp: '^BOOTPROTO'
         line: BOOTPROTO=static
      
     - name: Configure prod IP
@@ -100,6 +110,16 @@
       copy:
         src: authorized_keys
         dest: /root/.ssh
+
+    - name: Run postconfig yaml
+      include: "{{ item }}"
+      with_items: "{{ postconfig }}"
+      when: postconfig is defined
+
+    - name: Run server postconfig 
+      include: "{{ item.postconfig }}"
+      when: (server == item.hostname and item.postconfig is defined)
+      with_items: "{{ servers }}"
 
     - name: Reboot server (Will Fail)
       command: reboot
